@@ -1,0 +1,139 @@
+---
+title: "R Notebook"
+output:
+  word_document: default
+  html_notebook: default
+---
+
+```{r}
+my_stocks <- read.csv("stocks.csv",header=TRUE, stringsAsFactors = FALSE)
+```
+
+
+#Data Preparation
+
+```{r}
+
+library(dplyr)      
+library(readr)       
+library(tidyr)        
+library(ggplot2)      
+str(my_stocks)
+summary(my_stocks)
+head(my_stocks)
+colnames(my_stocks)
+cat("\n=== COLUMN NAMES ===\n")
+colnames(my_stocks)
+
+cat("\n=== FIRST 10 ROWS ===\n")
+head(my_stocks, 10)
+
+cat("\n=== DATA SUMMARY ===\n")
+summary(my_stocks)
+
+if("date" %in% colnames(my_stocks)) {
+  my_stocks$date <- as.Date(my_stocks$date)
+  cat("Converted date column to proper Date format\n")
+}
+
+numeric_cols <- c("open", "high", "low", "close", "volume")
+for(col in numeric_cols) {
+  if(col %in% colnames(my_stocks) && !is.numeric(my_stocks[[col]])) {
+    my_stocks[[col]] <- as.numeric(my_stocks[[col]])
+    cat("Converted", col, "to numeric\n")
+  }
+}
+```
+
+Since the CSV file has already been loaded using the read.csv command, now we need to prepare the data before answering the questions for this assignment. We now need to load the packages such as dplyr and tydyr by using the library() command. Now we will run some codes to prepare the data for answering the questions in the assignment.Previously we learned how to use the summarise() command from the dplyr package but in this case I think the summary() command which is a more simple way to do it is more efficient. So we used the summary() command for getting a quick overview of the all columns because it automatically detects all column types and provides a quick overview. We also used the str() command to get the number of rows and columns. Then we used the head() command because it displays only the first 6 rows of the data, since the data set we have is huge in this case and we shouldn't display the whole data here. Then we checked for missing data and then we ensured that the date column is in date format and alsos if we have the necessary numeric columns and convert if needed. 
+
+For the questions below, show both the code used to answer along with text that shows the answer: 
+
+#Identifying how many different stocks are there (by stock symbol) 
+
+
+```{r}
+num_stocks <- my_stocks %>%
+  summarise(n_stocks = n_distinct(stock_symbol))
+num_stocks
+```
+To find how many different stocks are in the dataset, I used the unique() function on the stock_symbol column to get all distinct stock names. Then I used the length() function to count how many unique values there were.
+This tells me how many different stock symbols (companies) are represented in the data.
+
+#Identifying what are those stocks
+
+
+```{r}
+unique_stocks <- my_stocks %>%
+  distinct(stock_symbol) %>%
+  arrange(stock_symbol)
+unique_stocks
+```
+To list all the different stock symbols, I again used the unique() function on the stock_symbol column, which returns each stock symbol only once. Then I applied the sort() function to arrange them alphabetically, making it easier to view and interpret.
+This gives me a complete list of all the stocks included in the dataset.
+
+#Identifying which stock had the highest single gain in a day and which day it was
+
+
+```{r}
+my_stocks <- my_stocks %>%
+  arrange(stock_symbol, date) %>%
+  group_by(stock_symbol) %>%
+  mutate(daily_change = stock_price_close - lag(stock_price_close))
+
+highest_gain <- my_stocks %>%
+  filter(daily_change == max(daily_change, na.rm = TRUE)) %>%
+  select(stock_symbol, date, daily_change)
+highest_gain
+```
+To find the highest single-day gain, I first arranged the data by stock symbol and date so that each stock’s daily prices are in order. Then, I created a new column called daily_change by subtracting the previous day’s closing price (using the lag() function) from the current day’s closing price.
+This gives me how much each stock’s price changed from one day to the next.
+After that, I used the filter() function to find the row where this daily change was the maximum value in the whole dataset. This tells me which stock had the biggest single-day increase and on what date it happened.
+
+# Identifying which stock had the highest single loss in a day and which day it was
+
+
+```{r}
+highest_loss <- my_stocks %>%
+  filter(daily_change == min(daily_change, na.rm = TRUE)) %>%
+  select(stock_symbol, date, daily_change)
+highest_loss
+```
+To find the biggest one-day loss, I used a similar approach to the previous question.
+Since I already calculated the daily_change column, I simply looked for the row where this value was the smallest (most negative).
+Using min(daily_change, na.rm = TRUE) inside filter() allowed me to identify the stock and date that experienced the largest drop in closing price from one day to the next.
+
+#Creating a plot of closing price for XOM over time
+
+
+```{r}
+xom_data <- my_stocks %>%
+  filter(stock_symbol == "XOM")
+
+ggplot(xom_data, aes(x = date, y = stock_price_close)) +
+  geom_line(color = "blue", linewidth = 1) +
+  labs(title = "XOM Closing Price Over Time",
+       x = "Date",
+       y = "Closing Price") +
+  theme_minimal()
+```
+To create a plot of XOM's closing price over time, I first filtered the dataset to include only rows where the stock symbol is "XOM" using the filter() function. Then I used ggplot() to initialize a plot with the date on the x-axis and the closing price on the y-axis. The geom_line() function connected the data points with a blue line, creating a time series visualization. Finally, I added appropriate labels using labs() to clearly identify the plot and used theme_minimal() for a clean, professional appearance.
+
+#Creating a plot of closing price for XKK over time
+
+
+```{r}
+xkk_data <- my_stocks %>%
+  filter(stock_symbol == "XKK")
+
+ggplot(xkk_data, aes(x = date, y = stock_price_close)) +
+  geom_line(color = "red", linewidth = 1) +
+  labs(title = "XKK Closing Price Over Time",
+       x = "Date",
+       y = "Closing Price") +
+  theme_minimal()
+```
+For the XKK closing price plot, I followed the same approach as for XOM. I filtered the dataset to include only XKK data using filter(stock_symbol == "XKK"). I then created a line plot with dates on the x-axis and closing prices on the y-axis, using a red line to distinguish it from the XOM plot. The same labeling and theming were applied to maintain consistency and clarity across both visualizations.
+
+
+
